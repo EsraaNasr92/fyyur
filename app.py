@@ -338,21 +338,7 @@ def delete_venue(venue_id):
 	except SQLAlchemyError as e:
 		flash('error occur')
 	return render_template('pages/home.html')
-	# try:
-	# 	venue = Venue.query.filter_by(id=venue_id).first_or_404()
-	# 	print(venue)
-	# 	db.session.delete(venue)
-	# 	db.session.commit()
-	# 	flash('The venue has been removed!')
-	# 	print("All clear!")
-	# 	return render_template('pages/home.html')
-	# except Exception:
-	# 	db.session.rollback()
-	# 	flash('It was not possible to delete this Venue')
-	# 	print("In Exception area")
-	# finally:
-	# 	db.session.close()
-	# return None
+
 
 #  Artists
 #  ----------------------------------------------------------------
