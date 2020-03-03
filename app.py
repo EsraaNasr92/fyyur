@@ -167,7 +167,7 @@ class Show(db.Model):
 		return{
 		'artist_id':self.artist_id,
 		'artist_name':self.Artist.name,
-		'artist_image_link':self.Artist.image_link,
+		'venue_image_link':self.Artist.image_link,
 		'start_time':self.start_time
 		}
 
@@ -349,12 +349,35 @@ def search_artists():
 		# seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
 		# search for "band" should return "The Wild Sax Band".
 
+	artist_query = Artist.query.filter(Artist.name.ilike('%' + request.form['search_term']+ '%'))
+	artist_list = list(map(Artist.result, artist_query))
+	test={
+	"count": len(artist_list),
+	"data": artist_list
+	}
+	return render_template('pages/search_artists.html', results=test, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
 	# shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
+	artist_query = Artist.query.get(artist_id)
+	if artist_query:
+		artist_details = Artist.details(artist_query)
+		#get current system time
+		current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		new_shows_query = Show.query.options(db.joinedload(Show.Artist)).filter(Show.artist_id == artist_id).filter(Show.start_time > current_time).all()
+		new_shows_list = list(map(Show.artist_details, new_shows_query))
+		artist_details["upcoming_shows"] = new_shows_list
+		artist_details["upcoming_shows_count"] = len(new_shows_list)
+		past_shows_query = Show.query.options(db.joinedload(Show.Artist)).filter(Show.artist_id == artist_id).filter(Show.start_time <= current_time).all()
+		past_shows_list = list(map(Show.artist_details, past_shows_query))
+		artist_details["past_shows"] = past_shows_list
+		artist_details["past_shows_count"] = len(past_shows_list)
+		return render_template('pages/show_artist.html', artist = artist_details)
 
+
+	return render_template('error/404.html')
 
 		#data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
 		#return render_template('pages/show_artist.html', artist=data)
@@ -363,12 +386,51 @@ def show_artist(artist_id):
 #  ----------------------------------------------------------------
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-
+		form = ArtistForm()
+		artist_data = Artist.query.get(artist_id)
+		if artist_data:
+			artist_details = Artist.details(artist_data)
+			form.name.data = artist_details['name']
+			form.genres.data = artist_details['genres']
+			form.city.data = artist_details['city']
+			form.state.data = artist_details['state']
+			form.phone.data = artist_details['phone']
+			form.website.data = artist_details['website']
+			form.facebook_link.data = artist_details['facebook_link']
+			form.seeking_talent.data = artist_details['seeking_talent']
+			form.seeking_description.data = artist_details['seeking_description']
+			form.image_link.data = artist_details['image_link']
+		# TODO: populate form with fields form artist with ID <artist_id>
+		return render_template('forms/edit_artist.html', form=form, artist=artist_details)
+		return render_template('errors/404.html')
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
 		# TODO: take values from the form submitted, and update existing
 		# artist record with ID <artist_id> using the new attributes
+		form = ArtistForm(request.form)
+		artist_data =Artist.query.get(artist_id)
+		try:
+			seeking_talent = False
+			seeking_description = ''
+			if 'seeking_talent' in request.form:
+				seeking_talent = request.form['seeking_talent'] == 'y'
+			if 'seeking_description' in request.form:
+				seeking_description = request.form['seeking_description']
+				setattr(artist_data, 'name', request.form['name'])
+				setattr(artist_data, 'genres', request.form.getlist('genres'))
+				setattr(artist_data, 'city', request.form['city'])
+				setattr(artist_data, 'state', request.form['state'])
+				setattr(artist_data, 'phone', request.form['phone'])
+				setattr(artist_data, 'website', request.form['website'])
+				setattr(artist_data, 'facebook_link', request.form['facebook_link'])
+				setattr(artist_data, 'image_link', request.form['image_link'])
+				setattr(artist_data, 'seeking_talent', seeking_talent)
+				setattr(artist_data, 'seeking_description', seeking_description)
+				Artist.update(artist_data)
+				return redirect(url_for('show_artist', artist_id=artist_id))
+		except SQLAlchemyError as e:
+			flash('An error occurred. Venue  could not be updated.')
 
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
