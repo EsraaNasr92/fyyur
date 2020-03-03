@@ -50,12 +50,24 @@ class Venue(db.Model):
 				website = db.Column(db.String(120))
 				seeking_talent =db.Column(Boolean, default=False)
 				seeking_description = db.Column(db.String(500),default='')
-				shows = db.relationship('Show', backref='Venue', lazy='dynamic')
+				shows = db.relationship('Show', backref='Venue', lazy='dynamic', cascade='all , delete')
+				
+				def __init__(self, name, genres, city, state,  phone,image_link, website,facebook_link,seeking_talent=False, seeking_description=""):
+					self.name= name
+					self.genres= genres
+					self.city= city
+					self.state= state
+					self.phone= phone
+					self.website= website
+					self.image_link= image_link
+					self.facebook_link= facebook_link
+					self.seeking_talent= seeking_talent
+					self.seeking_description= seeking_description
 
-				def __repr__(self):
-					return("Venue".format(self.id, self.name,self.genres, self.address, self.city, self.state,
-						self.phone, self.website, self.facebook_link, self.image_link, self.seeking_talent,
-						self.seeking_description))
+				# def __repr__(self):
+				# 	return("Venue".format(self.id, self.name,self.genres, self.address, self.city, self.state,
+				# 		self.phone, self.website, self.facebook_link, self.image_link, self.seeking_talent,
+				# 		self.seeking_description))
 
 				def short(self):
 					return{'id': self.id, 'name': self.name}
@@ -144,7 +156,7 @@ class Show(db.Model):
 
 	id = db.Column(Integer,primary_key=True)
 	venue_id = db.Column(Integer, ForeignKey(Venue.id), nullable=False)
-	artist_id = db.Column(Integer, ForeignKey(Artist.id), nullable=False)
+	artist_id = db.Column(Integer, ForeignKey(Artist.id, ondelete='CASCADE'), nullable=False)
 	start_time = db.Column(String(), nullable=False)
 
 
@@ -317,23 +329,30 @@ def create_venue_submission():
 		flash('An error occurred. Venue ' + request.form['name'] + ' could not be listed.')
 	return render_template('pages/home.html')
 
-
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
 	try:
-		Venue.query.filter_by(id=venue_id).delete()
+		venue = Venue.query.get(venue_id)
+		db.session.delete(venue)
 		db.session.commit()
-	except:
-		db.session.rollback()
-	finally:
-		db.session.close()
-	
-		# TODO: Complete this endpoint for taking a venue_id, and using
-		# SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
-
-		# BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
-		# clicking that button delete it from the db then redirect the user to the homepage
-		return redirect(url_for('pages/home.html', venue_id=venue_id))
+	except SQLAlchemyError as e:
+		flash('error occur')
+	return render_template('pages/home.html')
+	# try:
+	# 	venue = Venue.query.filter_by(id=venue_id).first_or_404()
+	# 	print(venue)
+	# 	db.session.delete(venue)
+	# 	db.session.commit()
+	# 	flash('The venue has been removed!')
+	# 	print("All clear!")
+	# 	return render_template('pages/home.html')
+	# except Exception:
+	# 	db.session.rollback()
+	# 	flash('It was not possible to delete this Venue')
+	# 	print("In Exception area")
+	# finally:
+	# 	db.session.close()
+	# return None
 
 #  Artists
 #  ----------------------------------------------------------------
