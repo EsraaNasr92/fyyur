@@ -48,16 +48,17 @@ class Venue(db.Model):
 				genres = db.Column(ARRAY(String))
 				image_link = db.Column(db.String(500))
 				website = db.Column(db.String(120))
-				seeking_talent =db.Column(Boolean, default=False)
+				seeking_talent =db.Column(db.Boolean, default=False)
 				seeking_description = db.Column(db.String(500),default='')
 				shows = db.relationship('Show', backref='Venue', lazy='dynamic', cascade='all , delete')
 				
-				def __init__(self, name, genres, city, state,  phone,image_link, website,facebook_link,seeking_talent=False, seeking_description=""):
+				def __init__(self, name, genres, city, state,  phone, address ,image_link, website,facebook_link,seeking_talent=False, seeking_description=""):
 					self.name= name
 					self.genres= genres
 					self.city= city
 					self.state= state
 					self.phone= phone
+					self.address = address
 					self.website= website
 					self.image_link= image_link
 					self.facebook_link= facebook_link
@@ -154,10 +155,10 @@ class Artist(db.Model):
 class Show(db.Model):
 	__tablename__ = 'Show'
 
-	id = db.Column(Integer,primary_key=True)
-	venue_id = db.Column(Integer, ForeignKey(Venue.id), nullable=False)
-	artist_id = db.Column(Integer, ForeignKey(Artist.id, ondelete='CASCADE'), nullable=False)
-	start_time = db.Column(String(), nullable=False)
+	id = db.Column(db.Integer,primary_key=True)
+	venue_id = db.Column(db.Integer, ForeignKey(Venue.id, ondelete='CASCADE'), nullable=False)
+	artist_id = db.Column(db.Integer, ForeignKey(Artist.id, ondelete='CASCADE'), nullable=False)
+	start_time = db.Column(db.DateTime(), nullable=False)
 
 
 	def __init__(self, venue_id,artist_id,start_time):
@@ -449,6 +450,7 @@ def edit_venue(venue_id):
 			form.city.data = venue_details['city']
 			form.state.data = venue_details['state']
 			form.phone.data = venue_details['phone']
+			form.address.data = venue_details['address']
 			form.website.data = venue_details['website']
 			form.facebook_link.data = venue_details['facebook_link']
 			form.seeking_talent.data = venue_details['seeking_talent']
@@ -541,8 +543,17 @@ def shows():
 		# displays list of shows at /shows
 		# TODO: replace with real venues data.
 		#       num_shows should be aggregated based on number of upcoming shows per venue.
+#previous code 
+
+		# show_query = Show.query.options(db.joinedload(Show.Venue), db.joinedload(Show.Artist)).all()
+		# data = list(map(Show.showDetails, show_query))
+		# return render_template('pages/shows.html', shows=data)
+		
+#New code for shows
 		show_query = Show.query.options(db.joinedload(Show.Venue), db.joinedload(Show.Artist)).all()
-		data = list(map(Show.showDetails, show_query))
+		shows = Venue.query.all()
+		for show in shows:
+			data = list(map(Show.showDetails, show_query))
 		return render_template('pages/shows.html', shows=data)
 
 @app.route('/shows/create')
