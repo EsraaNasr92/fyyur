@@ -15,6 +15,7 @@ from forms import *
 from flask_migrate import Migrate
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, ARRAY, ForeignKey 
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -222,34 +223,53 @@ def index():
 def venues():
 		# TODO: replace with real venues data.
 		#       num_shows should be aggregated based on number of upcoming shows per venue.
-	current_time = datetime.now().strftime('%Y-%m-%d %H:%S:%M')
-	venues = Venue.query.group_by(Venue.id, Venue.state, Venue.city).all()
-	venue_state_and_city = ''
-	data = []
+	# current_time = datetime.now().strftime('%Y-%m-%d %H:%S:%M')
+	# venues = Venue.query.group_by(Venue.id, Venue.state, Venue.city).all()
+	# venue_state_and_city = ''
+	# data = []
 
-	#loop through venues to check for upcoming shows, city, states and venue information
-	for venue in venues:
-		#filter upcoming shows given that the show start time is greater than the current time
-		print(venue)
-		upcoming_shows = venue.shows.filter(Show.start_time > current_time).all()
-		if venue_state_and_city == venue.city + venue.state:
-			data[len(data) - 1]["venues"].append({
-				"id": venue.id,
-				"name":venue.name,
-				"num_upcoming_shows": len(upcoming_shows) # a count of the number of shows
-			})
-		else:
-		 venue_state_and_city == venue.city + venue.state
-		 data.append({
-			"city":venue.city,
-			"state":venue.state,
-				"venues": [{
-				"id": venue.id,
-				"name":venue.name,
-				"num_upcoming_shows": len(upcoming_shows)
-				}]
-		})
-		 return render_template('pages/venues.html', areas=data)
+	# #loop through venues to check for upcoming shows, city, states and venue information
+	# for venue in venues:
+	# 	#filter upcoming shows given that the show start time is greater than the current time
+	# 	print(venue)
+	# 	upcoming_shows = venue.shows.filter(Show.start_time > current_time).all()
+	# 	if venue_state_and_city == venue.city + venue.state:
+	# 		data[len(data) - 1]["venues"].append({
+	# 			"id": venue.id,
+	# 			"name":venue.name,
+	# 			"num_upcoming_shows": len(upcoming_shows) # a count of the number of shows
+	# 		})
+	# 	else:
+	# 	 venue_state_and_city == venue.city + venue.state
+	# 	 data.append({
+	# 		"city":venue.city,
+	# 		"state":venue.state,
+	# 			"venues": [{
+	# 			"id": venue.id,
+	# 			"name":venue.name,
+	# 			"num_upcoming_shows": len(upcoming_shows)
+	# 			}]
+	# 	})
+	# 	 return render_template('pages/venues.html', areas=data)
+	now = datetime.now().strftime('%Y-%m-%d %H:%S:%M')
+	data = []
+	# Get all distincts locals by city and state
+	for venue in Venue.query.distinct(Venue.city, Venue.state).all():
+	# append only city and state names
+		data.append({'city': venue.city, 'state': venue.state})
+
+	# Add venues to the locals
+	for item in data:
+		item["venues"] = []
+		for venue in Venue.query.all():
+			if venue.city == item["city"] and venue.state == item["state"]:
+				venue_dict = venue.__dict__
+				# add num_shows for venue
+				venue_dict['num_shows'] = venue.shows.filter(
+					Show.start_time > now, Show.venue_id == venue.id).count()
+				item["venues"].append(venue.__dict__)
+	return render_template('pages/venues.html', areas=data)
+
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
